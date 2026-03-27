@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
 find_package(Gmsh REQUIRED)
 
 include(FetchContent)
@@ -19,11 +18,11 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(googletest)
 
-
 add_library(fem
     mesh2d.cpp
     ref_T3.cpp
     poisson_kernel.cpp
+    assemble.cpp
 )
 
 target_include_directories(fem
@@ -47,17 +46,17 @@ elseif(MSVC)
     target_compile_options(fem PRIVATE /W4)
 endif()
 
-
 enable_testing()
 
-add_executable(test_poisson_kernel
-    tests/test_poisson_kernel.cpp
+add_executable(test_poisson_solver
+    tests/test_poisson_solver.cpp
 )
 
-target_link_libraries(test_poisson_kernel
+
+target_link_libraries(test_poisson_solver
     PRIVATE fem
     PRIVATE GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_poisson_kernel)
+gtest_discover_tests(test_poisson_solver)

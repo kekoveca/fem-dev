@@ -27,5 +27,6 @@ public:
         LocalVector Fe;
     };
 
-    ElementData element_matrix(const ElementPoints& element_points);
+    virtual ElementData element_matrix(const ElementPoints& pts);
+    virtual ~PoissonKernel() = default;
 };

@@ -13,9 +13,9 @@ Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
 
     gmsh::model::mesh::getNodes(node_tags, node_coords, node_params);
 
-    std::unordered_map<std::size_t, int> node_tag_to_index;
-    std::unordered_map<std::size_t, int> line_elem_tag_to_index;
-    std::unordered_map<std::size_t, int> tri_elem_tag_to_index;
+    std::unordered_map<std::size_t, std::size_t> node_tag_to_index;
+    std::unordered_map<std::size_t, std::size_t> line_elem_tag_to_index;
+    std::unordered_map<std::size_t, std::size_t> tri_elem_tag_to_index;
 
     mesh.coords.resize(node_tags.size());
 
@@ -35,9 +35,9 @@ Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
 
     for (std::size_t i = 0; i < triangle_elem_node_tags.size(); i += 3)
     {
-        int n0 = node_tag_to_index[triangle_elem_node_tags[i]];
-        int n1 = node_tag_to_index[triangle_elem_node_tags[i + 1]];
-        int n2 = node_tag_to_index[triangle_elem_node_tags[i + 2]];
+        std::size_t n0 = node_tag_to_index[triangle_elem_node_tags[i]];
+        std::size_t n1 = node_tag_to_index[triangle_elem_node_tags[i + 1]];
+        std::size_t n2 = node_tag_to_index[triangle_elem_node_tags[i + 2]];
 
         mesh.triangles.push_back({n0, n1, n2});
     }
@@ -58,8 +58,8 @@ Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
 
     for (std::size_t i = 0; i < line_elem_nodes_tags.size(); i += 2)
     {
-        int n0 = node_tag_to_index[line_elem_nodes_tags[i]];
-        int n1 = node_tag_to_index[line_elem_nodes_tags[i + 1]];
+        std::size_t n0 = node_tag_to_index[line_elem_nodes_tags[i]];
+        std::size_t n1 = node_tag_to_index[line_elem_nodes_tags[i + 1]];
 
         mesh.lines.push_back({n0, n1});
     }
@@ -96,14 +96,13 @@ Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
 
                 for (size_t k = 0; k < elem_types.size(); ++k)
                 {
-                    int         elem_type = elem_types[k];
-                    const auto& tags      = elem_tags[k];
+                    const auto& tags = elem_tags[k];
                     for (const auto tag : tags)
                     {
                         auto it = tri_elem_tag_to_index.find(tag);
                         if (it != tri_elem_tag_to_index.end())
                         {
-                            int idx                 = it->second;
+                            std::size_t idx         = it->second;
                             mesh.triangle_tags[idx] = physical_tag;
                         }
                     }
@@ -121,14 +120,13 @@ Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
 
                 for (size_t k = 0; k < elem_types.size(); ++k)
                 {
-                    int         elem_type = elem_types[k];
-                    const auto& tags      = elem_tags[k];
+                    const auto& tags = elem_tags[k];
                     for (const auto tag : tags)
                     {
                         auto it = line_elem_tag_to_index.find(tag);
                         if (it != line_elem_tag_to_index.end())
                         {
-                            int idx             = it->second;
+                            std::size_t idx     = it->second;
                             mesh.line_tags[idx] = physical_tag;
                         }
                     }

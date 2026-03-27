@@ -18,8 +18,8 @@ class Mesh2d
 {
 public:
     std::vector<std::array<double, 2>>         coords;
-    std::vector<std::array<int, 3>>            triangles;
-    std::vector<std::array<int, 2>>            lines;
+    std::vector<std::array<std::size_t, 3>>    triangles;
+    std::vector<std::array<std::size_t, 2>>    lines;
     std::vector<int>                           triangle_tags;
     std::vector<int>                           line_tags;
     std::unordered_map<std::string, FieldInfo> fields_data;

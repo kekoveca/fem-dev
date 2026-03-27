@@ -66,10 +66,10 @@ PoissonKernel::ElementData PoissonKernel::element_matrix(const ElementPoints& el
         double fq = f(x, y);
         double kq = k(x, y);
 
-        for (int i = 0; i < Tri3::nen; ++i)
+        for (std::size_t i = 0; i < Tri3::nen; ++i)
         {
             data.Fe[i] += shapes[i] * fq * detJ * w;
-            for (int j = 0; j < Tri3::nen; ++j)
+            for (std::size_t j = 0; j < Tri3::nen; ++j)
             {
                 data.Ke[i][j] +=
                     kq * (B_physical[0][i] * B_physical[0][j] + B_physical[1][i] * B_physical[1][j]) * detJ * w;
