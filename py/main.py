@@ -11,6 +11,8 @@ import matplotlib.tri as mtri
 
 import gmsh
 
+mesh_path = "meshes/test_mesh.msh"
+
 
 def plot_solution_2d(mesh, u):
     coords = mesh.coords
@@ -35,7 +37,7 @@ def create_mesh():
 
     gmsh.model.add("rectangle")
 
-    lc = 0.5
+    lc = 0.07
     p1 = gmsh.model.geo.addPoint(0, 0, 0, lc)
     p2 = gmsh.model.geo.addPoint(1.0, 0, 0, lc)
     p3 = gmsh.model.geo.addPoint(1.0, 1.0, 0, lc)
@@ -60,27 +62,30 @@ def create_mesh():
     gmsh.model.mesh.generate(2)
 
     gmsh.option.setNumber("Mesh.Binary", 1)
-    gmsh.write("rectangle.msh")
+    gmsh.write(mesh_path)
     gmsh.finalize()
 
 
 def main():
+    test_data_folder = "/home/alex/fem-dev/tests/test_data/"
+
     create_mesh()
-    mesh = read_gmsh_meshio("rectangle.msh", dim=2)
+
+    mesh = read_gmsh_meshio(mesh_path, dim=2)
 
     ref = Tri3()
 
     # Пример: k=1, f=1
     kernel = PoissonKernel(
-        k=lambda xy: 0.0,
-        f=lambda xy: 1.0,
+        f=lambda xy: 5.0,
+        k=lambda xy: 3.0,
     )
 
     K, F = assemble_poisson(mesh, ref, kernel, quad_order=2, cell_type="triangle")
 
     # Дирихле: boundary_one -> u=0, boundary_two -> u=1 (пример)
-    bc1 = DirichletBC("boundary_one", value=lambda xy: 0.0)
-    bc2 = DirichletBC("boundary_two", value=lambda xy: 0.0)
+    bc1 = DirichletBC("boundary_one", value=lambda xy: 3.0)
+    bc2 = DirichletBC("boundary_two", value=lambda xy: 5.0)
 
     fixed_nodes_1 = dirichlet_nodes_from_physical(mesh, mesh.physical_tag(bc1.physical_name))
     fixed_nodes_2 = dirichlet_nodes_from_physical(mesh, mesh.physical_tag(bc2.physical_name))
@@ -92,18 +97,27 @@ def main():
         xy = mesh.coords[node]
         # если узел попал в обе группы (углы) — можно задать приоритетом или проверять по границе;
         # здесь просто: если в boundary_two -> 1, иначе 0
-        if node in set(fixed_nodes_2):
-            u_fixed[i] = bc2.value(xy)
-        else:
+        if node in set(fixed_nodes_1):
             u_fixed[i] = bc1.value(xy)
+        else:
+            u_fixed[i] = bc2.value(xy)
 
     Kff, Ff, free, fixed, u_fixed = apply_dirichlet_elimination(K, F, fixed, u_fixed)
 
     u_free = np.linalg.solve(Kff, Ff)
     u = recover_full_solution(u_free, F.shape[0], free, fixed, u_fixed)
 
+    np.savetxt(test_data_folder + "reduced_matrix_flattened_test.txt", Kff.flatten())
+    np.savetxt(test_data_folder + "reduced_rhs_flattened_test.txt", Ff.flatten())
+    np.savetxt(test_data_folder + "full_rhs_flattened_test.txt", F.flatten())
+    np.savetxt(test_data_folder + "full_matrix_flattened_test.txt", K.flatten())
+    np.savetxt(test_data_folder + "fixed_nodes_test.txt", fixed.flatten())
+    np.savetxt(test_data_folder + "fixed_values_test.txt", u_fixed.flatten())
+    np.savetxt(test_data_folder + "fixed_values_test.txt", u_fixed.flatten())
+    np.savetxt(test_data_folder + "solution_test.txt", u)
+
     print("Solved. u min/max:", u.min(), u.max())
-    plot_solution_2d(mesh, u)
+    # plot_solution_2d(mesh, u)
 
 
 if __name__ == "__main__":

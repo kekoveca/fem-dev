@@ -1,10 +1,11 @@
 #include "mesh2d.hpp"
 
-Mesh2d Mesh2d::read_from_gmsh(const std::string& path)
+Mesh2d Mesh2d::read_from_gmsh(const std::string& path, const std::size_t gmsh_verbosity)
 {
     Mesh2d mesh;
 
     gmsh::initialize();
+    gmsh::option::setNumber("General.Verbosity", static_cast<double>(gmsh_verbosity));
     gmsh::open(path);
 
     std::vector<std::size_t> node_tags;

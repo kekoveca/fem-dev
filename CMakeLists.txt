@@ -23,6 +23,7 @@ add_library(fem
     ref_T3.cpp
     poisson_kernel.cpp
     assemble.cpp
+    bc.cpp
 )
 
 target_include_directories(fem

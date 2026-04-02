@@ -24,31 +24,7 @@ def dirichlet_nodes_from_physical(mesh, physical_tag: int) -> np.ndarray:
 
 def apply_dirichlet_elimination(K, F, fixed_nodes, fixed_values):
     """
-    Убирает DOF с условиями Дирихле из dense-системы K u = F.
-
-    Parameters
-    ----------
-    K : np.ndarray
-        Глобальная матрица (n, n)
-    F : np.ndarray
-        Глобальный вектор правой части (n,)
-    fixed_nodes : array-like
-        Глобальные индексы закреплённых узлов
-    fixed_values : array-like
-        Значения решения в этих узлах
-
-    Returns
-    -------
-    K_reduced : np.ndarray
-        Подматрица по свободным DOF
-    F_reduced : np.ndarray
-        Правая часть по свободным DOF: F_f - K_fd u_d
-    free_nodes : np.ndarray
-        Индексы свободных DOF
-    fixed_nodes : np.ndarray
-        Индексы закреплённых DOF
-    fixed_values : np.ndarray
-        Значения в закреплённых DOF
+    Убирает DOF с условиями Дирихле
     """
     fixed_nodes = np.asarray(fixed_nodes, dtype=int)
     fixed_values = np.asarray(fixed_values, dtype=float)

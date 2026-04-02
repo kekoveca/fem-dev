@@ -25,7 +25,7 @@ public:
     std::unordered_map<std::string, FieldInfo> fields_data;
 
     void          print_info() const;
-    static Mesh2d read_from_gmsh(const std::string& path);
+    static Mesh2d read_from_gmsh(const std::string& path, std::size_t gmsh_verbosity = 0);
 
 private:
     std::vector<std::size_t> _triangle_elem_tags;
