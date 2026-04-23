@@ -5,6 +5,8 @@ from ref_T3 import Tri3
 from poisson_kernel import PoissonKernel
 from assemble import assemble_poisson
 from bc import DirichletBC, dirichlet_nodes_from_physical, apply_dirichlet_elimination, recover_full_solution
+from gmres import GMRES
+
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
@@ -104,7 +106,7 @@ def main():
 
     Kff, Ff, free, fixed, u_fixed = apply_dirichlet_elimination(K, F, fixed, u_fixed)
 
-    u_free = np.linalg.solve(Kff, Ff)
+    u_free, _ = GMRES(Kff, Ff, rtol=1e-8)
     u = recover_full_solution(u_free, F.shape[0], free, fixed, u_fixed)
 
     np.savetxt(test_data_folder + "reduced_matrix_flattened_test.txt", Kff.flatten())
