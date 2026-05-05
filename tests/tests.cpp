@@ -1,5 +1,6 @@
 #include "assemble.hpp"
 #include "bc.hpp"
+#include "matrix.hpp"
 #include "mesh2d.hpp"
 #include "poisson_kernel.hpp"
 
@@ -120,11 +121,11 @@ TEST(AssembleTest, SingleTriangleAssemblesLocalMatrixAndVector)
 
     ASSERT_TRUE(kernel.called);
 
-    ASSERT_EQ(out.F.size(), 3);
-    ASSERT_EQ(out.K.size(), 3);
-    ASSERT_EQ(out.K[0].size(), 3);
-    ASSERT_EQ(out.K[1].size(), 3);
-    ASSERT_EQ(out.K[2].size(), 3);
+    EXPECT_EQ(out.F.size(), 3);
+    EXPECT_EQ(out.K.size(), 3);
+    EXPECT_EQ(out.K[0].size(), 3);
+    EXPECT_EQ(out.K[1].size(), 3);
+    EXPECT_EQ(out.K[2].size(), 3);
 
     EXPECT_DOUBLE_EQ(out.F[0], 1.0);
     EXPECT_DOUBLE_EQ(out.F[1], 2.0);
@@ -174,7 +175,7 @@ TEST(DirichletBCTest, DirichletNodesFromPhysicalSelectsCorrectNodes)
 
     const auto nodes = DirichletBC::dirichlet_nodes_from_physical(mesh, 10);
 
-    ASSERT_EQ(nodes.size(), 4);
+    EXPECT_EQ(nodes.size(), 4);
     EXPECT_EQ(nodes[0], 0u);
     EXPECT_EQ(nodes[1], 1u);
     EXPECT_EQ(nodes[2], 2u);
@@ -197,24 +198,24 @@ TEST(DirichletBCTest, ApplyDirichletEliminationBuildsReducedSystem)
 
     const auto reduced = DirichletBC::apply_dirichlet_elimination(K, F, fixed);
 
-    ASSERT_EQ(reduced.free_nodes.size(), 2);
+    EXPECT_EQ(reduced.free_nodes.size(), 2);
     EXPECT_EQ(reduced.free_nodes[0], 1u);
     EXPECT_EQ(reduced.free_nodes[1], 2u);
 
-    ASSERT_EQ(reduced.fixed.size(), 1);
+    EXPECT_EQ(reduced.fixed.size(), 1);
     EXPECT_EQ(reduced.fixed[0].node, 0u);
     EXPECT_DOUBLE_EQ(reduced.fixed[0].value, 10.0);
 
-    ASSERT_EQ(reduced.K_reduced.size(), 2);
-    ASSERT_EQ(reduced.K_reduced[0].size(), 2);
-    ASSERT_EQ(reduced.K_reduced[1].size(), 2);
+    EXPECT_EQ(reduced.K_reduced.size(), 2);
+    EXPECT_EQ(reduced.K_reduced[0].size(), 2);
+    EXPECT_EQ(reduced.K_reduced[1].size(), 2);
 
     EXPECT_DOUBLE_EQ(reduced.K_reduced[0][0], 4.0);
     EXPECT_DOUBLE_EQ(reduced.K_reduced[0][1], -1.0);
     EXPECT_DOUBLE_EQ(reduced.K_reduced[1][0], -1.0);
     EXPECT_DOUBLE_EQ(reduced.K_reduced[1][1], 4.0);
 
-    ASSERT_EQ(reduced.F_reduced.size(), 2);
+    EXPECT_EQ(reduced.F_reduced.size(), 2);
 
     // F_free = [2, 3]
     // K_fd = [[-1], [0]]
@@ -254,7 +255,7 @@ TEST(DirichletBCTest, RecoverFullSolutionReconstructsCorrectVector)
 
     const auto u = DirichletBC::recover_full_solution(free_solution, fixed, 4);
 
-    ASSERT_EQ(u.size(), 4);
+    EXPECT_EQ(u.size(), 4);
     EXPECT_DOUBLE_EQ(u[0], 0.0);
     EXPECT_DOUBLE_EQ(u[1], 2.5);
     EXPECT_DOUBLE_EQ(u[2], 1.0);
@@ -333,7 +334,7 @@ TEST(SolverTest, FixedNodesSizeEQTest)
 
     nodes_and_values.erase(it, nodes_and_values.end());
 
-    ASSERT_EQ(nodes_and_values.size(), fixed_from_testfile.size());
+    EXPECT_EQ(nodes_and_values.size(), fixed_from_testfile.size());
 }
 
 TEST(SolverTest, FixedValuesEQTest)
@@ -394,7 +395,7 @@ TEST(SolverTest, FixedValuesEQTest)
         };
     }
 
-    ASSERT_EQ(error_counter, 0);
+    EXPECT_EQ(error_counter, 0);
 }
 
 TEST(SolverTest, FullMatrixTest)
@@ -417,8 +418,8 @@ TEST(SolverTest, FullMatrixTest)
 
     std::size_t m = assembled.K.size();
     std::size_t n = assembled.K[0].size();
-    ASSERT_EQ(m, n);
-    ASSERT_EQ(matrix_from_testfile.size(), m * n);
+    EXPECT_EQ(m, n);
+    EXPECT_EQ(matrix_from_testfile.size(), m * n);
 
     int counter = 0;
     for (std::size_t i = 0; i < m; ++i)
@@ -431,7 +432,7 @@ TEST(SolverTest, FullMatrixTest)
             }
         }
     }
-    ASSERT_EQ(counter, 0);
+    EXPECT_EQ(counter, 0);
 }
 
 TEST(SolverTest, ReducedMatrixTest)
@@ -488,8 +489,8 @@ TEST(SolverTest, ReducedMatrixTest)
 
     std::size_t m = reduced_system.K_reduced.size();
     std::size_t n = reduced_system.K_reduced[0].size();
-    ASSERT_EQ(m, n);
-    ASSERT_EQ(matrix_from_testfile.size(), m * n);
+    EXPECT_EQ(m, n);
+    EXPECT_EQ(matrix_from_testfile.size(), m * n);
 
     int counter = 0;
     for (std::size_t i = 0; i < m; ++i)
@@ -502,7 +503,7 @@ TEST(SolverTest, ReducedMatrixTest)
             }
         }
     }
-    ASSERT_EQ(counter, 0);
+    EXPECT_EQ(counter, 0);
 }
 
 TEST(SolverTest, FullRHSTest)
@@ -523,7 +524,7 @@ TEST(SolverTest, FullRHSTest)
     }
 
     std::size_t n = assembled.F.size();
-    ASSERT_EQ(rhs_from_testfile.size(), n);
+    EXPECT_EQ(rhs_from_testfile.size(), n);
 
     int counter = 0;
     for (std::size_t i = 0; i < n; ++i)
@@ -533,7 +534,7 @@ TEST(SolverTest, FullRHSTest)
             ++counter;
         }
     }
-    ASSERT_EQ(counter, 0);
+    EXPECT_EQ(counter, 0);
 }
 
 TEST(SolverTest, ReducedRHSTest)
@@ -588,7 +589,7 @@ TEST(SolverTest, ReducedRHSTest)
     auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
 
     std::size_t m = reduced_system.F_reduced.size();
-    ASSERT_EQ(rhs_from_testfile.size(), m);
+    EXPECT_EQ(rhs_from_testfile.size(), m);
 
     int counter = 0;
     for (std::size_t i = 0; i < m; ++i)
@@ -599,5 +600,93 @@ TEST(SolverTest, ReducedRHSTest)
             ++counter;
         }
     }
-    ASSERT_EQ(counter, 0);
+    EXPECT_EQ(counter, 0);
+}
+
+TEST(MatrixClassTests, DotProductTest)
+{
+    std::vector<double> a {1.0, 2.0, 3.0};
+    std::vector<double> b {4.0, 5.0, 6.0};
+
+    double result = dot(a, b);
+    EXPECT_EQ(result, 32.0);
+}
+
+TEST(MatrixClassTests, SumTest)
+{
+    DenseMatrix<double> A(2, 2);
+    DenseMatrix<double> B(2, 2);
+
+    for (std::size_t i = 0; i < 2; ++i)
+    {
+        for (std::size_t j = 0; j < 2; ++j)
+        {
+            A(i, j) = i + j;
+            B(i, j) = 2 * i + j;
+        }
+    }
+
+    auto C = A + B;
+
+    EXPECT_DOUBLE_EQ(C(0, 0), 0.0);
+    EXPECT_DOUBLE_EQ(C(0, 1), 2.0);
+    EXPECT_DOUBLE_EQ(C(1, 0), 3.0);
+    EXPECT_DOUBLE_EQ(C(1, 1), 5.0);
+}
+
+TEST(MatrixClassTests, DiffTest)
+{
+    DenseMatrix<double> A(2, 2);
+    DenseMatrix<double> B(2, 2);
+
+    for (std::size_t i = 0; i < 2; ++i)
+    {
+        for (std::size_t j = 0; j < 2; ++j)
+        {
+            A(i, j) = i + j;
+            B(i, j) = 2 * i + j;
+        }
+    }
+
+    auto C = A - B;
+
+    EXPECT_DOUBLE_EQ(C(0, 0), 0.0);
+    EXPECT_DOUBLE_EQ(C(0, 1), 0.0);
+    EXPECT_DOUBLE_EQ(C(1, 0), -1.0);
+    EXPECT_DOUBLE_EQ(C(1, 1), -1.0);
+}
+
+TEST(MatrixClassTests, MatmulTest)
+{
+    DenseMatrix<double> A(2, 2);
+    DenseMatrix<double> B(2, 2);
+
+    A(0, 0) = 3.1;
+    A(0, 1) = 12.2;
+    A(1, 0) = 4.2;
+    A(1, 1) = 5.7;
+
+    B(0, 0) = 35.3;
+    B(0, 1) = 9.7;
+    B(1, 0) = 6.3;
+    B(1, 1) = 12.2;
+
+    auto C = A * B;
+
+    EXPECT_DOUBLE_EQ(C(0, 0), 186.29);
+    EXPECT_DOUBLE_EQ(C(0, 1), 178.91);
+    EXPECT_DOUBLE_EQ(C(1, 0), 184.17);
+    EXPECT_DOUBLE_EQ(C(1, 1), 110.28);
+
+    auto D = B * A;
+
+    EXPECT_DOUBLE_EQ(D(0, 0), 150.17);
+    EXPECT_DOUBLE_EQ(D(0, 1), 485.95);
+    EXPECT_DOUBLE_EQ(D(1, 0), 70.77);
+    EXPECT_DOUBLE_EQ(D(1, 1), 146.4);
+
+    DenseMatrix<double> M(2, 6);
+    DenseMatrix<double> N(4, 7);
+
+    EXPECT_THROW(M * N, std::invalid_argument);
 }

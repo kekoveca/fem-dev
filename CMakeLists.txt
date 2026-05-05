@@ -24,6 +24,7 @@ add_library(fem
     poisson_kernel.cpp
     assemble.cpp
     bc.cpp
+    matrix.cpp
 )
 
 target_include_directories(fem
@@ -49,15 +50,15 @@ endif()
 
 enable_testing()
 
-add_executable(test_poisson_solver
-    tests/test_poisson_solver.cpp
+add_executable(tests
+    tests/tests.cpp
 )
 
 
-target_link_libraries(test_poisson_solver
+target_link_libraries(tests
     PRIVATE fem
     PRIVATE GTest::gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(test_poisson_solver)
+gtest_discover_tests(tests)
