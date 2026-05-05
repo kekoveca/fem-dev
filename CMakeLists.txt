@@ -24,7 +24,8 @@ add_library(fem
     poisson_kernel.cpp
     assemble.cpp
     bc.cpp
-    matrix.cpp
+    matrix.hpp
+    cg.hpp
 )
 
 target_include_directories(fem

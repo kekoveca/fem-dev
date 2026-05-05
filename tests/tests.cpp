@@ -1,5 +1,6 @@
 #include "assemble.hpp"
 #include "bc.hpp"
+#include "cg.hpp"
 #include "matrix.hpp"
 #include "mesh2d.hpp"
 #include "poisson_kernel.hpp"
@@ -689,4 +690,186 @@ TEST(MatrixClassTests, MatmulTest)
     DenseMatrix<double> N(4, 7);
 
     EXPECT_THROW(M * N, std::invalid_argument);
+}
+
+TEST(MatrixClassTests, MatVecProductTest)
+{
+    DenseMatrix<double> A(2, 3);
+
+    A(0, 0) = 1.0;
+    A(0, 1) = 2.0;
+    A(0, 2) = 3.0;
+
+    A(1, 0) = 4.0;
+    A(1, 1) = 5.0;
+    A(1, 2) = 6.0;
+
+    std::vector<double> x {10.0, 20.0, 30.0};
+
+    std::vector<double> y = A * x;
+
+    EXPECT_DOUBLE_EQ(y[0], 140.0);
+    EXPECT_DOUBLE_EQ(y[1], 320.0);
+}
+
+TEST(MatrixClassTests, VecMatProductTest)
+{
+    std::vector<double> x {10.0, 20.0};
+
+    DenseMatrix<double> A(2, 3);
+
+    A(0, 0) = 1.0;
+    A(0, 1) = 2.0;
+    A(0, 2) = 3.0;
+
+    A(1, 0) = 4.0;
+    A(1, 1) = 5.0;
+    A(1, 2) = 6.0;
+
+    std::vector<double> y = x * A;
+
+    EXPECT_DOUBLE_EQ(y[0], 90.0);
+    EXPECT_DOUBLE_EQ(y[1], 120.0);
+    EXPECT_DOUBLE_EQ(y[2], 150.0);
+}
+
+TEST(MatrixClassTests, VectorNormTest)
+{
+    std::vector<double> v    = {3.0, 4.0};
+    double              magn = norm(v);
+    EXPECT_DOUBLE_EQ(magn, 5.0);
+}
+
+TEST(MatrixClassTests, VectorSubtractionTest)
+{
+    const std::vector<double> a = {6.0, 10.0, 8.0};
+    const std::vector<double> b = {-6.0, -10.0, -8.0};
+
+    const auto r = a - b;
+
+    ASSERT_EQ(r.size(), 3);
+    EXPECT_DOUBLE_EQ(r[0], 12.0);
+    EXPECT_DOUBLE_EQ(r[1], 20.0);
+    EXPECT_DOUBLE_EQ(r[2], 16.0);
+}
+
+template <typename T>
+void expect_vector_near(const std::vector<T>& actual, const std::vector<T>& expected, T eps)
+{
+    ASSERT_EQ(actual.size(), expected.size());
+
+    for (std::size_t i = 0; i < actual.size(); ++i)
+    {
+        EXPECT_NEAR(actual[i], expected[i], eps) << "Mismatch at index " << i;
+    }
+}
+
+TEST(CGTest, Solves2x2KnownSolution)
+{
+    DenseMatrix<double> A(2, 2);
+
+    A(0, 0) = 4.0;
+    A(0, 1) = 1.0;
+    A(1, 0) = 1.0;
+    A(1, 1) = 3.0;
+
+    std::vector<double> b = {1.0, 2.0};
+
+    auto x = CG(A, b, 1e-12, 1e-14, 100);
+
+    const std::vector<double> expected = {1.0 / 11.0, 7.0 / 11.0};
+
+    expect_vector_near(x, expected, 1e-10);
+}
+
+TEST(CGTest, ReturnsZeroForZeroRightHandSide)
+{
+    DenseMatrix<double> A(3, 3);
+
+    A(0, 0) = 2.0;
+    A(0, 1) = 0.0;
+    A(0, 2) = 0.0;
+
+    A(1, 0) = 0.0;
+    A(1, 1) = 3.0;
+    A(1, 2) = 0.0;
+
+    A(2, 0) = 0.0;
+    A(2, 1) = 0.0;
+    A(2, 2) = 4.0;
+
+    std::vector<double> b = {0.0, 0.0, 0.0};
+
+    auto x = CG(A, b);
+
+    const std::vector<double> expected = {0.0, 0.0, 0.0};
+
+    expect_vector_near(x, expected, 1e-14);
+}
+
+TEST(CGTest, SolvesDiagonalMatrix)
+{
+    DenseMatrix<double> A(4, 4);
+
+    A(0, 0) = 2.0;
+    A(0, 1) = 0.0;
+    A(0, 2) = 0.0;
+    A(0, 3) = 0.0;
+
+    A(1, 0) = 0.0;
+    A(1, 1) = 4.0;
+    A(1, 2) = 0.0;
+    A(1, 3) = 0.0;
+
+    A(2, 0) = 0.0;
+    A(2, 1) = 0.0;
+    A(2, 2) = 5.0;
+    A(2, 3) = 0.0;
+
+    A(3, 0) = 0.0;
+    A(3, 1) = 0.0;
+    A(3, 2) = 0.0;
+    A(3, 3) = 10.0;
+
+    std::vector<double> b = {2.0, 8.0, 15.0, 40.0};
+
+    auto x = CG(A, b, 1e-12, 1e-14, 100);
+
+    const std::vector<double> expected = {1.0, 2.0, 3.0, 4.0};
+
+    expect_vector_near(x, expected, 1e-10);
+}
+
+TEST(CGTest, ProducesSmallResidual)
+{
+    DenseMatrix<double> A(3, 3);
+
+    A(0, 0) = 4.0;
+    A(0, 1) = 1.0;
+    A(0, 2) = 0.0;
+
+    A(1, 0) = 1.0;
+    A(1, 1) = 3.0;
+    A(1, 2) = 1.0;
+
+    A(2, 0) = 0.0;
+    A(2, 1) = 1.0;
+    A(2, 2) = 2.0;
+
+    const std::vector<double> expected = {1.0, 2.0, 3.0};
+
+    auto b = A * expected;
+
+    EXPECT_NEAR(b[0], 6.0, 1e-14);
+    EXPECT_NEAR(b[1], 10.0, 1e-14);
+    EXPECT_NEAR(b[2], 8.0, 1e-14);
+
+    auto x = CG(A, b, 1e-12, 1e-14, 100);
+
+    auto Ax = A * x;
+    auto r  = b - Ax;
+
+    EXPECT_LT(norm(r), 1e-10);
+
+    expect_vector_near(x, expected, 1e-10);
 }

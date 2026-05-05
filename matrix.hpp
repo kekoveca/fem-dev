@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <stdexcept>
 #include <vector>
 
@@ -118,6 +119,109 @@ DenseMatrix<T> operator*(const DenseMatrix<T>& A, const DenseMatrix<T>& B)
                 result(i, j) += A(i, k) * B(k, j);
             }
         }
+    }
+
+    return result;
+}
+
+template <typename T>
+std::vector<T> operator*(const DenseMatrix<T>& A, const std::vector<T>& x)
+{
+    if (A.cols() != x.size())
+    {
+        throw std::invalid_argument("dimensions mismatch");
+    }
+
+    std::vector<T> result(A.rows());
+
+    for (std::size_t i = 0; i < A.rows(); ++i)
+    {
+        for (std::size_t j = 0; j < A.cols(); ++j)
+        {
+            result[i] += A(i, j) * x[j];
+        }
+    }
+
+    return result;
+}
+
+template <typename T>
+std::vector<T> operator*(const std::vector<T>& x, const DenseMatrix<T>& A)
+{
+    if (A.rows() != x.size())
+    {
+        throw std::invalid_argument("dimensions mismatch");
+    }
+
+    std::vector<T> result(A.cols());
+
+    for (std::size_t i = 0; i < A.rows(); ++i)
+    {
+        for (std::size_t j = 0; j < A.cols(); ++j)
+        {
+            result[j] += A(i, j) * x[i];
+        }
+    }
+
+    return result;
+}
+
+template <typename T>
+double norm(const std::vector<T> x)
+{
+    T res {};
+    for (std::size_t i = 0; i < x.size(); ++i)
+    {
+        res += x[i] * x[i];
+    }
+    return std::sqrt(res);
+}
+
+template <typename T>
+std::vector<T> operator+(const std::vector<T>& x, const DenseMatrix<T>& y)
+{
+    if (x.size() != y.size())
+    {
+        throw std::invalid_argument("dimensions mismatch");
+    }
+
+    std::vector<T> result(x.size());
+
+    for (std::size_t i = 0; i < x.size(); ++i)
+    {
+        result[i] = x[i] + y[i];
+    }
+
+    return result;
+}
+
+template <typename T>
+std::vector<T> operator-(const std::vector<T>& x, const std::vector<T>& y)
+{
+    if (x.size() != y.size())
+    {
+        throw std::invalid_argument("dimensions mismatch");
+    }
+
+    std::vector<T> result(x.size());
+
+    for (std::size_t i = 0; i < x.size(); ++i)
+    {
+        result[i] = x[i] - y[i];
+    }
+
+    return result;
+}
+
+template <typename T>
+std::vector<T> operator*(const T a, const std::vector<T>& y)
+{
+
+    std::vector<T> result(y.size());
+
+    for (std::size_t i = 0; i < y.size(); ++i)
+    {
+        result[i] = a * y[i];
     }
 
     return result;
