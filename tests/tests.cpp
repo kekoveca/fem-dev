@@ -590,6 +590,54 @@ TEST(SolverTest, ReducedRHSTest)
     EXPECT_EQ(counter, 0);
 }
 
+TEST(SolverTest, FreeValuesTest)
+{
+    std::string   mesh_fname = "/home/alex/fem-dev/meshes/test_mesh.msh";
+    auto          mesh       = Mesh2d::read_from_gmsh(mesh_fname);
+    PoissonKernel kernel([](double x, double y) { return F_VAL; }, [](double x, double y) { return K_VAL; });
+    auto          bc1  = DirichletBC("boundary_one", [](double x, double y) { return BND_1_VAL; });
+    auto          bc2  = DirichletBC("boundary_two", [](double x, double y) { return BND_2_VAL; });
+    auto fixed_nodes_1 = DirichletBC::dirichlet_nodes_from_physical(mesh, mesh.fields_data.at(bc1.physical_name).tag);
+    auto fixed_nodes_2 = DirichletBC::dirichlet_nodes_from_physical(mesh, mesh.fields_data.at(bc2.physical_name).tag);
+    auto fixed         = fixed_nodes_1;
+
+    fixed.reserve(fixed_nodes_1.size() + fixed_nodes_2.size());
+
+    for (const auto& elem : fixed_nodes_2)
+    {
+        fixed.push_back(elem);
+    }
+
+    std::sort(fixed.begin(), fixed.end());
+    fixed.erase(std::unique(fixed.begin(), fixed.end()), fixed.end());
+
+    std::vector<DirichletBC::NodeAndValue> nodes_and_values(fixed.size());
+
+    for (std::size_t i = 0; i < fixed.size(); ++i)
+    {
+        auto node                = fixed[i];
+        nodes_and_values[i].node = node;
+        auto [x, y]              = mesh.coords[node];
+        if (std::find(fixed_nodes_1.begin(), fixed_nodes_1.end(), node) != fixed_nodes_1.end())
+        {
+            nodes_and_values[i].value = bc1.value(x, y);
+        }
+        else
+        {
+            nodes_and_values[i].value = bc2.value(x, y);
+        }
+    }
+
+    auto assembled      = Assemble::assemble_poisson(mesh, kernel);
+    auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
+    auto solution       = CG(reduced_system.K_reduced, reduced_system.F_reduced, 1e-10, 1e-14);
+
+    std::string         solution_test_fname = "/home/alex/fem-dev/tests/test_data/free_values_test.txt";
+    std::vector<double> test_solution_data  = read_testfile_data<double>(solution_test_fname);
+
+    expect_vector_near(solution, test_solution_data, 1e-8);
+}
+
 TEST(SolverTest, FullSolverTest)
 {
     std::string   mesh_fname = "/home/alex/fem-dev/meshes/test_mesh.msh";
@@ -630,7 +678,7 @@ TEST(SolverTest, FullSolverTest)
 
     auto assembled      = Assemble::assemble_poisson(mesh, kernel);
     auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
-    auto solution       = CG(reduced_system.K_reduced, reduced_system.F_reduced);
+    auto solution       = CG(reduced_system.K_reduced, reduced_system.F_reduced, 1e-10, 1e-14);
 
     std::vector<DirichletBC::NodeAndValue> freed;
     freed.resize(solution.size());
@@ -639,14 +687,12 @@ TEST(SolverTest, FullSolverTest)
     {
         freed[i] = {reduced_system.free_nodes[i], solution[i]};
     }
-
     auto u = DirichletBC::recover_full_solution(freed, reduced_system.fixed, mesh.coords.size());
 
     std::string         solution_test_fname = "/home/alex/fem-dev/tests/test_data/solution_test.txt";
     std::vector<double> test_solution_data  = read_testfile_data<double>(solution_test_fname);
 
-    auto err = norm(test_solution_data - u);
-    EXPECT_LT(err, 1e-14);
+    expect_vector_near(u, test_solution_data, 1e-8);
 }
 
 TEST(MatrixClassTests, DotProductTest)
@@ -781,7 +827,7 @@ TEST(MatrixClassTests, VecMatProductTest)
 TEST(MatrixClassTests, VectorNormTest)
 {
     std::vector<double> v    = {3.0, 4.0};
-    double              magn = norm(v);
+    double              magn = norm_L2(v);
     EXPECT_DOUBLE_EQ(magn, 5.0);
 }
 
@@ -903,7 +949,7 @@ TEST(CGTest, ProducesSmallResidual)
     auto Ax = A * x;
     auto r  = b - Ax;
 
-    EXPECT_LT(norm(r), 1e-10);
+    EXPECT_LT(norm_L2(r), 1e-10);
 
     expect_vector_near(x, expected, 1e-10);
 }

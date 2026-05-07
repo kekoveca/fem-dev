@@ -19,7 +19,7 @@ std::vector<T> CG(const DenseMatrix<T>& A, const std::vector<T>& b, double rtol 
 
     T rr = dot(r, r);
 
-    const T b_norm = norm(b);
+    const T b_norm = norm_L2(b);
     const T tol    = static_cast<T>(atol) + static_cast<T>(rtol) * b_norm;
     const T tol2   = tol * tol;
 

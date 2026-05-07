@@ -182,7 +182,7 @@ std::vector<T> operator*(const std::vector<T>& x, const DenseMatrix<T>& A)
 }
 
 template <typename T>
-double norm(const std::vector<T> x)
+double norm_L2(const std::vector<T> x)
 {
     T res {};
     for (std::size_t i = 0; i < x.size(); ++i)
