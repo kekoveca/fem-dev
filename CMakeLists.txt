@@ -55,7 +55,6 @@ add_executable(tests
     tests/tests.cpp
 )
 
-
 target_link_libraries(tests
     PRIVATE fem
     PRIVATE GTest::gtest_main

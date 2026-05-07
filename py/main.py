@@ -106,7 +106,7 @@ def main():
 
     Kff, Ff, free, fixed, u_fixed = apply_dirichlet_elimination(K, F, fixed, u_fixed)
 
-    u_free, _ = GMRES(Kff, Ff, rtol=1e-8)
+    u_free = np.linalg.solve(Kff, Ff)
     u = recover_full_solution(u_free, F.shape[0], free, fixed, u_fixed)
 
     np.savetxt(test_data_folder + "reduced_matrix_flattened_test.txt", Kff.flatten())
@@ -117,6 +117,7 @@ def main():
     np.savetxt(test_data_folder + "fixed_values_test.txt", u_fixed.flatten())
     np.savetxt(test_data_folder + "fixed_values_test.txt", u_fixed.flatten())
     np.savetxt(test_data_folder + "solution_test.txt", u)
+    np.savetxt(test_data_folder + "free_values_test.txt", u_free.flatten())
 
     print("Solved. u min/max:", u.min(), u.max())
     # plot_solution_2d(mesh, u)

@@ -15,8 +15,23 @@ public:
     {
     }
 
+    DenseMatrix(std::size_t rows, std::size_t cols, std::vector<T>& data)
+        : _rows(rows)
+        , _cols(cols)
+        , _data(data)
+    {
+    }
+
+    DenseMatrix() {}
+
     std::size_t rows() const noexcept { return _rows; };
     std::size_t cols() const noexcept { return _cols; };
+    void        resize(std::size_t rows, std::size_t cols)
+    {
+        _rows = rows;
+        _cols = cols;
+        _data.assign(rows * cols, T {});
+    }
 
     T&       operator()(std::size_t row, std::size_t col) { return _data[row * _cols + col]; };
     const T& operator()(std::size_t row, std::size_t col) const { return _data[row * _cols + col]; };

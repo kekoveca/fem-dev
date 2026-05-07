@@ -15,6 +15,38 @@ constexpr double K_VAL     = 3.0;
 constexpr double BND_1_VAL = 3.0;
 constexpr double BND_2_VAL = 5.0;
 
+template <typename T>
+std::vector<T> read_testfile_data(const std::string& fname)
+{
+    std::ifstream test_file(fname);
+
+    if (!test_file)
+    {
+        throw std::runtime_error("Cannot open file: " + fname);
+    }
+
+    std::vector<T> test_data;
+    T              x;
+
+    while (test_file >> x)
+    {
+        test_data.push_back(x);
+    }
+
+    return test_data;
+}
+
+template <typename T>
+void expect_vector_near(const std::vector<T>& actual, const std::vector<T>& expected, T eps)
+{
+    ASSERT_EQ(actual.size(), expected.size());
+
+    for (std::size_t i = 0; i < actual.size(); ++i)
+    {
+        EXPECT_NEAR(actual[i], expected[i], eps) << "Mismatch at index " << i;
+    }
+}
+
 TEST(PoissonKernelTest, ReferenceTriangle)
 {
     PoissonKernel kernel([](double x, double y) { return 1.0; }, [](double x, double y) { return 1.0; });
@@ -123,26 +155,22 @@ TEST(AssembleTest, SingleTriangleAssemblesLocalMatrixAndVector)
     ASSERT_TRUE(kernel.called);
 
     EXPECT_EQ(out.F.size(), 3);
-    EXPECT_EQ(out.K.size(), 3);
-    EXPECT_EQ(out.K[0].size(), 3);
-    EXPECT_EQ(out.K[1].size(), 3);
-    EXPECT_EQ(out.K[2].size(), 3);
+    EXPECT_EQ(out.K.rows(), 3);
+    EXPECT_EQ(out.K.cols(), 3);
 
     EXPECT_DOUBLE_EQ(out.F[0], 1.0);
     EXPECT_DOUBLE_EQ(out.F[1], 2.0);
     EXPECT_DOUBLE_EQ(out.F[2], 3.0);
 
-    EXPECT_DOUBLE_EQ(out.K[0][0], 2.0);
-    EXPECT_DOUBLE_EQ(out.K[0][1], -1.0);
-    EXPECT_DOUBLE_EQ(out.K[0][2], -1.0);
-
-    EXPECT_DOUBLE_EQ(out.K[1][0], -1.0);
-    EXPECT_DOUBLE_EQ(out.K[1][1], 2.0);
-    EXPECT_DOUBLE_EQ(out.K[1][2], -1.0);
-
-    EXPECT_DOUBLE_EQ(out.K[2][0], -1.0);
-    EXPECT_DOUBLE_EQ(out.K[2][1], -1.0);
-    EXPECT_DOUBLE_EQ(out.K[2][2], 2.0);
+    EXPECT_DOUBLE_EQ(out.K(0, 0), 2.0);
+    EXPECT_DOUBLE_EQ(out.K(0, 1), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(0, 2), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(1, 0), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(1, 1), 2.0);
+    EXPECT_DOUBLE_EQ(out.K(1, 2), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(2, 0), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(2, 1), -1.0);
+    EXPECT_DOUBLE_EQ(out.K(2, 2), 2.0);
 
     EXPECT_DOUBLE_EQ(kernel.last_coords[0][0], 0.0);
     EXPECT_DOUBLE_EQ(kernel.last_coords[0][1], 0.0);
@@ -185,11 +213,8 @@ TEST(DirichletBCTest, DirichletNodesFromPhysicalSelectsCorrectNodes)
 
 TEST(DirichletBCTest, ApplyDirichletEliminationBuildsReducedSystem)
 {
-    const std::vector<std::vector<double>> K = {
-        { 4.0, -1.0,  0.0},
-        {-1.0,  4.0, -1.0},
-        { 0.0, -1.0,  4.0}
-    };
+    std::vector<double>       _d = {4.0, -1.0, 0.0, -1.0, 4.0, -1.0, 0.0, -1.0, 4.0};
+    const DenseMatrix<double> K  = {3, 3, _d};
 
     const std::vector<double> F = {1.0, 2.0, 3.0};
 
@@ -207,14 +232,13 @@ TEST(DirichletBCTest, ApplyDirichletEliminationBuildsReducedSystem)
     EXPECT_EQ(reduced.fixed[0].node, 0u);
     EXPECT_DOUBLE_EQ(reduced.fixed[0].value, 10.0);
 
-    EXPECT_EQ(reduced.K_reduced.size(), 2);
-    EXPECT_EQ(reduced.K_reduced[0].size(), 2);
-    EXPECT_EQ(reduced.K_reduced[1].size(), 2);
+    EXPECT_EQ(reduced.K_reduced.rows(), 2);
+    EXPECT_EQ(reduced.K_reduced.cols(), 2);
 
-    EXPECT_DOUBLE_EQ(reduced.K_reduced[0][0], 4.0);
-    EXPECT_DOUBLE_EQ(reduced.K_reduced[0][1], -1.0);
-    EXPECT_DOUBLE_EQ(reduced.K_reduced[1][0], -1.0);
-    EXPECT_DOUBLE_EQ(reduced.K_reduced[1][1], 4.0);
+    EXPECT_DOUBLE_EQ(reduced.K_reduced(0, 0), 4.0);
+    EXPECT_DOUBLE_EQ(reduced.K_reduced(0, 1), -1.0);
+    EXPECT_DOUBLE_EQ(reduced.K_reduced(1, 0), -1.0);
+    EXPECT_DOUBLE_EQ(reduced.K_reduced(1, 1), 4.0);
 
     EXPECT_EQ(reduced.F_reduced.size(), 2);
 
@@ -227,10 +251,8 @@ TEST(DirichletBCTest, ApplyDirichletEliminationBuildsReducedSystem)
 
 TEST(DirichletBCTest, ApplyDirichletEliminationThrowsOnDuplicateDirichletNode)
 {
-    const std::vector<std::vector<double>> K = {
-        {1.0, 0.0},
-        {0.0, 1.0}
-    };
+    std::vector<double>       _d = {1.0, 0.0, 0.0, 1.0};
+    const DenseMatrix<double> K  = {2, 2, _d};
 
     const std::vector<double> F = {0.0, 0.0};
 
@@ -296,16 +318,8 @@ TEST(SolverTest, FixedNodesSizeEQTest)
         fixed.push_back(elem);
     }
 
-    std::string   fixed_nodes_test = "/home/alex/fem-dev/tests/test_data/fixed_nodes_test.txt";
-    std::ifstream fixed_nodes_file(fixed_nodes_test);
-
-    std::vector<std::size_t> fixed_from_testfile;
-
-    double _x;
-    while (fixed_nodes_file >> _x)
-    {
-        fixed_from_testfile.push_back(static_cast<std::size_t>(_x));
-    }
+    std::string fixed_nodes_test    = "/home/alex/fem-dev/tests/test_data/fixed_nodes_test.txt";
+    auto        fixed_from_testfile = read_testfile_data<double>(fixed_nodes_test);
 
     std::vector<DirichletBC::NodeAndValue> nodes_and_values = {};
     nodes_and_values.resize(fixed.size());
@@ -405,20 +419,13 @@ TEST(SolverTest, FullMatrixTest)
     auto          mesh       = Mesh2d::read_from_gmsh(mesh_fname);
     PoissonKernel kernel([](double x, double y) { return F_VAL; }, [](double x, double y) { return K_VAL; });
 
-    std::string         full_matrix_test = "/home/alex/fem-dev/tests/test_data/full_matrix_flattened_test.txt";
-    std::ifstream       full_matrix_file(full_matrix_test);
-    std::vector<double> matrix_from_testfile;
-    double              _x;
-
-    while (full_matrix_file >> _x)
-    {
-        matrix_from_testfile.push_back(_x);
-    }
+    std::string         full_matrix_test     = "/home/alex/fem-dev/tests/test_data/full_matrix_flattened_test.txt";
+    std::vector<double> matrix_from_testfile = read_testfile_data<double>(full_matrix_test);
 
     auto assembled = Assemble::assemble_poisson(mesh, kernel);
 
-    std::size_t m = assembled.K.size();
-    std::size_t n = assembled.K[0].size();
+    std::size_t m = assembled.K.rows();
+    std::size_t n = assembled.K.cols();
     EXPECT_EQ(m, n);
     EXPECT_EQ(matrix_from_testfile.size(), m * n);
 
@@ -427,7 +434,7 @@ TEST(SolverTest, FullMatrixTest)
     {
         for (std::size_t j = 0; j < n; ++j)
         {
-            if (std::abs(matrix_from_testfile[i * m + j] - assembled.K[i][j]) > 1.0e-12)
+            if (std::abs(matrix_from_testfile[i * m + j] - assembled.K(i, j)) > 1.0e-12)
             {
                 ++counter;
             }
@@ -475,21 +482,14 @@ TEST(SolverTest, ReducedMatrixTest)
         }
     }
 
-    std::string         reduced_matrix_test = "/home/alex/fem-dev/tests/test_data/reduced_matrix_flattened_test.txt";
-    std::ifstream       reduced_matrix_file(reduced_matrix_test);
-    std::vector<double> matrix_from_testfile;
-    double              _x;
-
-    while (reduced_matrix_file >> _x)
-    {
-        matrix_from_testfile.push_back(_x);
-    }
+    std::string         reduced_matrix_test  = "/home/alex/fem-dev/tests/test_data/reduced_matrix_flattened_test.txt";
+    std::vector<double> matrix_from_testfile = read_testfile_data<double>(reduced_matrix_test);
 
     auto assembled      = Assemble::assemble_poisson(mesh, kernel);
     auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
 
-    std::size_t m = reduced_system.K_reduced.size();
-    std::size_t n = reduced_system.K_reduced[0].size();
+    std::size_t m = reduced_system.K_reduced.rows();
+    std::size_t n = reduced_system.K_reduced.cols();
     EXPECT_EQ(m, n);
     EXPECT_EQ(matrix_from_testfile.size(), m * n);
 
@@ -498,7 +498,7 @@ TEST(SolverTest, ReducedMatrixTest)
     {
         for (std::size_t j = 0; j < n; ++j)
         {
-            if (std::abs(matrix_from_testfile[i * m + j] - reduced_system.K_reduced[i][j]) > 1.0e-12)
+            if (std::abs(matrix_from_testfile[i * m + j] - reduced_system.K_reduced(i, j)) > 1.0e-12)
             {
                 ++counter;
             }
@@ -513,16 +513,9 @@ TEST(SolverTest, FullRHSTest)
     auto          mesh       = Mesh2d::read_from_gmsh(mesh_fname);
     PoissonKernel kernel([](double x, double y) { return F_VAL; }, [](double x, double y) { return K_VAL; });
 
-    auto                assembled     = Assemble::assemble_poisson(mesh, kernel);
-    std::string         full_rhs_test = "/home/alex/fem-dev/tests/test_data/full_rhs_flattened_test.txt";
-    std::ifstream       full_rhs_file(full_rhs_test);
-    std::vector<double> rhs_from_testfile;
-    double              _x;
-
-    while (full_rhs_file >> _x)
-    {
-        rhs_from_testfile.push_back(_x);
-    }
+    auto                assembled         = Assemble::assemble_poisson(mesh, kernel);
+    std::string         full_rhs_test     = "/home/alex/fem-dev/tests/test_data/full_rhs_flattened_test.txt";
+    std::vector<double> rhs_from_testfile = read_testfile_data<double>(full_rhs_test);
 
     std::size_t n = assembled.F.size();
     EXPECT_EQ(rhs_from_testfile.size(), n);
@@ -576,15 +569,8 @@ TEST(SolverTest, ReducedRHSTest)
         }
     }
 
-    std::string         reduced_rhs_test = "/home/alex/fem-dev/tests/test_data/reduced_rhs_flattened_test.txt";
-    std::ifstream       reduced_rhs_file(reduced_rhs_test);
-    std::vector<double> rhs_from_testfile;
-    double              _x;
-
-    while (reduced_rhs_file >> _x)
-    {
-        rhs_from_testfile.push_back(_x);
-    }
+    std::string         reduced_rhs_test  = "/home/alex/fem-dev/tests/test_data/reduced_rhs_flattened_test.txt";
+    std::vector<double> rhs_from_testfile = read_testfile_data<double>(reduced_rhs_test);
 
     auto assembled      = Assemble::assemble_poisson(mesh, kernel);
     auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
@@ -602,6 +588,65 @@ TEST(SolverTest, ReducedRHSTest)
         }
     }
     EXPECT_EQ(counter, 0);
+}
+
+TEST(SolverTest, FullSolverTest)
+{
+    std::string   mesh_fname = "/home/alex/fem-dev/meshes/test_mesh.msh";
+    auto          mesh       = Mesh2d::read_from_gmsh(mesh_fname);
+    PoissonKernel kernel([](double x, double y) { return F_VAL; }, [](double x, double y) { return K_VAL; });
+    auto          bc1  = DirichletBC("boundary_one", [](double x, double y) { return BND_1_VAL; });
+    auto          bc2  = DirichletBC("boundary_two", [](double x, double y) { return BND_2_VAL; });
+    auto fixed_nodes_1 = DirichletBC::dirichlet_nodes_from_physical(mesh, mesh.fields_data.at(bc1.physical_name).tag);
+    auto fixed_nodes_2 = DirichletBC::dirichlet_nodes_from_physical(mesh, mesh.fields_data.at(bc2.physical_name).tag);
+    auto fixed         = fixed_nodes_1;
+
+    fixed.reserve(fixed_nodes_1.size() + fixed_nodes_2.size());
+
+    for (const auto& elem : fixed_nodes_2)
+    {
+        fixed.push_back(elem);
+    }
+
+    std::sort(fixed.begin(), fixed.end());
+    fixed.erase(std::unique(fixed.begin(), fixed.end()), fixed.end());
+
+    std::vector<DirichletBC::NodeAndValue> nodes_and_values(fixed.size());
+
+    for (std::size_t i = 0; i < fixed.size(); ++i)
+    {
+        auto node                = fixed[i];
+        nodes_and_values[i].node = node;
+        auto [x, y]              = mesh.coords[node];
+        if (std::find(fixed_nodes_1.begin(), fixed_nodes_1.end(), node) != fixed_nodes_1.end())
+        {
+            nodes_and_values[i].value = bc1.value(x, y);
+        }
+        else
+        {
+            nodes_and_values[i].value = bc2.value(x, y);
+        }
+    }
+
+    auto assembled      = Assemble::assemble_poisson(mesh, kernel);
+    auto reduced_system = DirichletBC::apply_dirichlet_elimination(assembled.K, assembled.F, nodes_and_values);
+    auto solution       = CG(reduced_system.K_reduced, reduced_system.F_reduced);
+
+    std::vector<DirichletBC::NodeAndValue> freed;
+    freed.resize(solution.size());
+
+    for (std::size_t i = 0; i < solution.size(); ++i)
+    {
+        freed[i] = {reduced_system.free_nodes[i], solution[i]};
+    }
+
+    auto u = DirichletBC::recover_full_solution(freed, reduced_system.fixed, mesh.coords.size());
+
+    std::string         solution_test_fname = "/home/alex/fem-dev/tests/test_data/solution_test.txt";
+    std::vector<double> test_solution_data  = read_testfile_data<double>(solution_test_fname);
+
+    auto err = norm(test_solution_data - u);
+    EXPECT_LT(err, 1e-14);
 }
 
 TEST(MatrixClassTests, DotProductTest)
@@ -751,17 +796,6 @@ TEST(MatrixClassTests, VectorSubtractionTest)
     EXPECT_DOUBLE_EQ(r[0], 12.0);
     EXPECT_DOUBLE_EQ(r[1], 20.0);
     EXPECT_DOUBLE_EQ(r[2], 16.0);
-}
-
-template <typename T>
-void expect_vector_near(const std::vector<T>& actual, const std::vector<T>& expected, T eps)
-{
-    ASSERT_EQ(actual.size(), expected.size());
-
-    for (std::size_t i = 0; i < actual.size(); ++i)
-    {
-        EXPECT_NEAR(actual[i], expected[i], eps) << "Mismatch at index " << i;
-    }
 }
 
 TEST(CGTest, Solves2x2KnownSolution)

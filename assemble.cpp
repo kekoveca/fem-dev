@@ -13,12 +13,7 @@ Assemble::GlobalData Assemble::assemble_poisson(const Mesh2d& mesh, PoissonKerne
         return out;
     }
 
-    out.K.resize(n_nodes);
-
-    for (std::size_t i = 0; i < n_nodes; ++i)
-    {
-        out.K[i].resize(n_nodes);
-    }
+    out.K.resize(n_nodes, n_nodes);
     out.F.resize(n_nodes);
 
     for (std::size_t i = 0; i < n_elems; ++i)
@@ -41,7 +36,7 @@ Assemble::GlobalData Assemble::assemble_poisson(const Mesh2d& mesh, PoissonKerne
             for (std::size_t b = 0; b < nen; ++b)
             {
                 std::size_t B = nodes[b];
-                out.K[A][B] += data.Ke[a][b];
+                out.K(A, B) += data.Ke[a][b];
             }
         }
     }

@@ -38,23 +38,20 @@ std::vector<std::size_t> DirichletBC::dirichlet_nodes_from_physical(const Mesh2d
     return dirichlet_nodes;
 };
 
-DirichletBC::ReducedSystem DirichletBC::apply_dirichlet_elimination(const std::vector<std::vector<double>>& K,
-                                                                    const std::vector<double>&              F,
-                                                                    std::vector<NodeAndValue> fixed_nodes_and_values)
+DirichletBC::ReducedSystem DirichletBC::apply_dirichlet_elimination(const DenseMatrix<double>& K,
+                                                                    const std::vector<double>& F,
+                                                                    std::vector<NodeAndValue>  fixed_nodes_and_values)
 {
     const std::size_t n = F.size();
 
-    if (K.size() != n)
+    if (K.cols() != n)
     {
         throw std::invalid_argument("K and F size mismatch");
     }
 
-    for (const auto& row : K)
+    if (K.rows() != K.cols())
     {
-        if (row.size() != n)
-        {
-            throw std::invalid_argument("K must be square");
-        }
+        throw std::invalid_argument("K must be square");
     }
 
     for (const auto& bc : fixed_nodes_and_values)
@@ -99,7 +96,7 @@ DirichletBC::ReducedSystem DirichletBC::apply_dirichlet_elimination(const std::v
     const std::size_t n_free  = out.free_nodes.size();
     const std::size_t n_fixed = out.fixed.size();
 
-    out.K_reduced.assign(n_free, std::vector<double>(n_free, 0.0));
+    out.K_reduced.resize(n_free, n_free);
     out.F_reduced.assign(n_free, 0.0);
 
     for (std::size_t i = 0; i < n_free; ++i)
@@ -111,13 +108,13 @@ DirichletBC::ReducedSystem DirichletBC::apply_dirichlet_elimination(const std::v
         for (std::size_t j = 0; j < n_fixed; ++j)
         {
             const std::size_t J = out.fixed[j].node;
-            out.F_reduced[i] -= K[I][J] * out.fixed[j].value;
+            out.F_reduced[i] -= K(I, J) * out.fixed[j].value;
         }
 
         for (std::size_t j = 0; j < n_free; ++j)
         {
             const std::size_t J = out.free_nodes[j];
-            out.K_reduced[i][j] = K[I][J];
+            out.K_reduced(i, j) = K(I, J);
         }
     }
 
